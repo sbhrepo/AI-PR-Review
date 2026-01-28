@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  pr-ai-reviewer:
+    build: .
+    container_name: pr-ai-reviewer
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - PR_AI_REVIEWER_CONFIG=/app/config/pr-ai-reviewer.config.yaml
+    volumes:
+      - ./pr-ai-reviewer.config.yaml:/app/config/pr-ai-reviewer.config.yaml:ro
+      - ./AI-review-request.txt:/app/AI-review-request.txt:ro
+      - ./data:/app/data
+    restart: unless-stopped
+    networks:
+      - pr-reviewer-network
+    depends_on:
+      - ollama
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: Run Ollama in the same compose stack
+  # Remove this if you're using an external Ollama instance
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - pr-reviewer-network
+    restart: unless-stopped
+    # Uncomment if you have GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+networks:
+  pr-reviewer-network:
+    driver: bridge
+
+volumes:
+  ollama-data:

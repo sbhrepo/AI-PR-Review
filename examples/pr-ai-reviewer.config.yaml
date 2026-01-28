@@ -1,0 +1,44 @@
+provider: github
+repos:
+  - owner/repo-name
+  - owner/another-repo
+
+run_mode: webhook
+
+ollama:
+  host: 10.169.36.250
+  port: 11434
+  model: llama3.1:8b-instruct
+  use_openai_compat: true
+  temperature: 0.3
+  max_tokens: 4096
+  timeout_ms: 120000
+
+review:
+  max_files: 100
+  max_hunks_per_file: 50
+  max_lines_per_hunk: 500
+  fail_on_severity_at_or_above: high
+  labeling_enabled: true
+  summary_enabled: true
+  dedupe_window_days: 14
+  excluded_paths:
+    - "**/*.lock"
+    - "**/*.min.js"
+    - "**/package-lock.json"
+    - "**/yarn.lock"
+    - "**/*.svg"
+    - "**/*.png"
+    - "**/*.jpg"
+    - "**/dist/**"
+    - "**/build/**"
+
+auth:
+  github:
+    type: pat  # or 'app'
+    token_env: GITHUB_TOKEN
+    # For GitHub App:
+    # type: app
+    # app_id_env: GITHUB_APP_ID
+    # installation_id_env: GITHUB_APP_INSTALLATION_ID
+    # private_key_env: GITHUB_APP_PRIVATE_KEY

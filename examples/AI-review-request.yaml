@@ -1,0 +1,68 @@
+checks:
+  security:
+    weight: 5
+    items:
+      - SQL injection
+      - command injection
+      - secrets exposure
+      - unsafe deserialization
+      - path traversal
+      - XSS vulnerabilities
+  
+  reliability:
+    weight: 4
+    items:
+      - null/undefined checks
+      - error handling
+      - resource cleanup
+      - concurrency issues
+      - race conditions
+  
+  performance:
+    weight: 3
+    items:
+      - n^2 or worse algorithms
+      - unnecessary allocations
+      - inefficient I/O
+      - blocking operations
+      - memory leaks
+  
+  maintainability:
+    weight: 2
+    items:
+      - high complexity
+      - code duplication
+      - unclear naming
+      - magic numbers
+      - missing documentation
+  
+  style:
+    weight: 1
+    items:
+      - formatting issues
+      - linting violations
+      - naming conventions
+
+must_check:
+  - Ensure no secrets or API keys in code or config
+  - Validate all external inputs and sanitize queries
+  - Error paths must log actionable messages (no PII)
+  - Public APIs require input validation and clear status codes
+  - Async operations must have proper error handling
+  - No hardcoded credentials or connection strings
+
+exclusions:
+  - "*.lock"
+  - "*.min.js"
+  - "*.md"
+  - "*.svg"
+  - "*.png"
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/vendor/**"
+  - "**/__fixtures__/**"
+
+output_preferences:
+  minimal_diffs: true
+  concise_comments: true

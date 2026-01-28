@@ -1,0 +1,26 @@
+[Checks]
+Security: weight=5 - SQL injection, command injection, secrets exposure, unsafe deserialization, path traversal, XSS
+Reliability: weight=4 - null checks, error handling, resource cleanup, concurrency issues, race conditions
+Performance: weight=3 - n^2 loops, unnecessary allocations, inefficient I/O, blocking operations
+Maintainability: weight=2 - complexity, code duplication, unclear naming, magic numbers
+Style: weight=1 - formatting, linting, naming conventions
+
+[Must-Check]
+Ensure no secrets or API keys in code or config
+Validate all external inputs and sanitize queries
+Error paths must log actionable messages (no PII)
+Public APIs require input validation and clear status codes
+Async operations must have proper error handling
+No hardcoded credentials or connection strings
+
+[Exclusions]
+Ignore generated files and lockfiles
+Ignore .md, .png, .svg unless explicitly changed with risk
+Ignore test fixtures and mock data
+Ignore vendor and third-party directories
+
+[Output Preferences]
+Prefer minimal diffs in suggestions
+Keep comments concise; include a "Why" and "Fix" section
+Focus on actionable items over nitpicks
+Provide code examples in suggestions

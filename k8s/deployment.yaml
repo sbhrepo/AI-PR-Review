@@ -1,0 +1,159 @@
+# Kubernetes Deployment for pr-ai-reviewer
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pr-ai-reviewer
+  labels:
+    app: pr-ai-reviewer
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pr-ai-reviewer
+  template:
+    metadata:
+      labels:
+        app: pr-ai-reviewer
+    spec:
+      containers:
+      - name: pr-ai-reviewer
+        image: pr-ai-reviewer:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: pr-ai-reviewer-secrets
+              key: github-token
+        - name: GITHUB_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: pr-ai-reviewer-secrets
+              key: webhook-secret
+        - name: PR_AI_REVIEWER_CONFIG
+          value: "/app/config/pr-ai-reviewer.config.yaml"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        - name: policy
+          mountPath: /app/AI-review-request.txt
+          subPath: AI-review-request.txt
+          readOnly: true
+        - name: data
+          mountPath: /app/data
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: config
+        configMap:
+          name: pr-ai-reviewer-config
+      - name: policy
+        configMap:
+          name: pr-ai-reviewer-policy
+      - name: data
+        persistentVolumeClaim:
+          claimName: pr-ai-reviewer-data
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pr-ai-reviewer
+  labels:
+    app: pr-ai-reviewer
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: pr-ai-reviewer
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pr-ai-reviewer-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pr-ai-reviewer-config
+data:
+  pr-ai-reviewer.config.yaml: |
+    provider: github
+    repos:
+      - owner/repo-name
+    run_mode: webhook
+    ollama:
+      host: 10.169.36.250
+      port: 11434
+      model: llama3.1:8b-instruct
+      use_openai_compat: true
+      temperature: 0.3
+      max_tokens: 4096
+      timeout_ms: 120000
+    review:
+      max_files: 100
+      max_hunks_per_file: 50
+      max_lines_per_hunk: 500
+      labeling_enabled: true
+      summary_enabled: true
+      dedupe_window_days: 14
+      excluded_paths:
+        - "**/*.lock"
+        - "**/*.min.js"
+    auth:
+      github:
+        type: pat
+        token_env: GITHUB_TOKEN
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pr-ai-reviewer-policy
+data:
+  AI-review-request.txt: |
+    [Checks]
+    Security: weight=5 - SQL injection, secrets exposure
+    Reliability: weight=4 - null checks, error handling
+    Performance: weight=3 - inefficient algorithms
+    
+    [Must-Check]
+    Ensure no secrets in code
+    Validate external inputs

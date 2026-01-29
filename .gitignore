@@ -164,3 +164,7 @@ examples/**/build
 examples/**/target
 examples/**/work
 examples/**/my-workspace
+
+# VS Code
+.vscode/
+.VSCodeCounter/

@@ -144,6 +144,13 @@ export class GitHubProvider implements GitProvider {
     const [owner, repoName] = repo.split('/');
     
     try {
+      // Get the PR to obtain the commit SHA
+      const { data: pr } = await this.octokit.pulls.get({
+        owner,
+        repo: repoName,
+        pull_number: prNumber,
+      });
+
       const { data } = await this.octokit.pulls.createReviewComment({
         owner,
         repo: repoName,
@@ -151,6 +158,7 @@ export class GitHubProvider implements GitProvider {
         body: comment.body,
         path: comment.path,
         line: comment.line,
+        commit_id: pr.head.sha,
         side: comment.side,
       });
 

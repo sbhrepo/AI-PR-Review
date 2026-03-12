@@ -25,6 +25,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+node_modules/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -168,3 +169,9 @@ examples/**/my-workspace
 # VS Code
 .vscode/
 .VSCodeCounter/
+
+# project specific
+AI-review-request.txt
+pr-ai-reviewer.config.yaml
+pr-ai-reviewer.db
+package-lock.json

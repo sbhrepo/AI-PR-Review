@@ -40,9 +40,10 @@ export class ReviewPolicyParser {
     if (data.Checks || data.checks) {
       const checks = data.Checks || data.checks;
       for (const [category, config] of Object.entries(checks as any)) {
+        const configObj = config as any;
         policy.checks[category.toLowerCase()] = {
-          weight: config.weight || 1,
-          items: Array.isArray(config.items) ? config.items : config.items.split(',').map((s: string) => s.trim()),
+          weight: configObj.weight || 1,
+          items: Array.isArray(configObj.items) ? configObj.items : configObj.items.split(',').map((s: string) => s.trim()),
         };
       }
     }

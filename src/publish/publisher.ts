@@ -81,25 +81,29 @@ export class CommentPublisher {
   }
 
   private formatInlineComment(issue: ReviewIssue): ReviewComment {
-    const severityEmoji = {
-      critical: '🚨',
-      high: '⚠️',
-      medium: '⚡',
-      low: '💡',
+    const severityBadges = {
+      critical: this.generateShieldsIoBadge('severity', 'critical', 'red'),
+      high: this.generateShieldsIoBadge('severity', 'high', 'orange'),
+      medium: this.generateShieldsIoBadge('severity', 'medium', 'yellow'),
+      low: this.generateShieldsIoBadge('severity', 'low', 'brightgreen'),
     };
 
-    const categoryEmoji = {
-      security: '🔒',
-      reliability: '🛡️',
-      performance: '⚡',
-      maintainability: '🔧',
-      style: '✨',
+    const categoryBadges = {
+      security: this.generateShieldsIoBadge('category', 'security', 'blue'),
+      reliability: this.generateShieldsIoBadge('category', 'reliability', '00afd0'),
+      performance: this.generateShieldsIoBadge('category', 'performance', '9933ff'),
+      maintainability: this.generateShieldsIoBadge('category', 'maintainability', 'ff9800'),
+      style: this.generateShieldsIoBadge('category', 'style', 'lightgrey'),
     };
 
-    const tags = `[${severityEmoji[issue.severity]} ${issue.severity.toUpperCase()}] [${categoryEmoji[issue.category]} ${issue.category}] [Confidence: ${(issue.confidence * 100).toFixed(0)}%]`;
+    const confidencePercent = (issue.confidence * 100).toFixed(0);
+    const confidenceColor = issue.confidence >= 0.8 ? 'brightgreen' : issue.confidence >= 0.6 ? 'yellow' : 'orange';
+    const confidenceBadge = this.generateShieldsIoBadge('confidence', `${confidencePercent}%`, confidenceColor);
+
+    const badges = `${severityBadges[issue.severity]} ${categoryBadges[issue.category]} ${confidenceBadge}`;
 
     let body = `### ${issue.title}\n\n`;
-    body += `${tags}\n\n`;
+    body += `${badges}\n\n`;
     body += `**Why it matters:**\n${issue.explanation}\n\n`;
     body += `**Suggested fix:**\n\`\`\`suggestion\n${issue.suggested_fix}\n\`\`\`\n\n`;
     
@@ -167,9 +171,10 @@ export class CommentPublisher {
   ): string {
     let body = '## 🤖 AI Code Review Summary\n\n';
 
-    // Risk score
-    const riskColor = summary.risk_score > 70 ? '🔴' : summary.risk_score > 40 ? '🟡' : '🟢';
-    body += `**Risk Score:** ${riskColor} ${summary.risk_score}/100\n\n`;
+    // Risk score with shield badge
+    const riskColor = summary.risk_score > 70 ? 'red' : summary.risk_score > 40 ? 'yellow' : 'brightgreen';
+    const riskBadge = this.generateShieldsIoBadge('risk_score', `${summary.risk_score}/100`, riskColor);
+    body += `${riskBadge}\n\n`;
 
     // Overall stats
     body += `**Total Issues Found:** ${summary.total_issues}\n\n`;
@@ -178,30 +183,33 @@ export class CommentPublisher {
     if (Object.keys(summary.by_severity).length > 0) {
       body += '### Issues by Severity\n\n';
       const severityOrder = ['critical', 'high', 'medium', 'low'];
+      const severityColors = { critical: 'red', high: 'orange', medium: 'yellow', low: 'brightgreen' };
       for (const severity of severityOrder) {
         const count = summary.by_severity[severity];
         if (count) {
-          const emoji = { critical: '🚨', high: '⚠️', medium: '⚡', low: '💡' }[severity];
-          body += `- ${emoji} **${severity.toUpperCase()}:** ${count}\n`;
+          const badge = this.generateShieldsIoBadge(severity, count.toString(), severityColors[severity as keyof typeof severityColors]);
+          body += `${badge} `;
         }
       }
-      body += '\n';
+      body += '\n\n';
     }
 
     // Breakdown by category
     if (Object.keys(summary.by_category).length > 0) {
       body += '### Issues by Category\n\n';
+      const categoryColors = {
+        security: 'blue',
+        reliability: '00afd0',
+        performance: '9933ff',
+        maintainability: 'ff9800',
+        style: 'lightgrey',
+      };
       for (const [category, count] of Object.entries(summary.by_category)) {
-        const emoji = {
-          security: '🔒',
-          reliability: '🛡️',
-          performance: '⚡',
-          maintainability: '🔧',
-          style: '✨',
-        }[category] || '📋';
-        body += `- ${emoji} **${category}:** ${count}\n`;
+        const color = categoryColors[category as keyof typeof categoryColors] || 'grey';
+        const badge = this.generateShieldsIoBadge(category, count.toString(), color);
+        body += `${badge} `;
       }
-      body += '\n';
+      body += '\n\n';
     }
 
     // Recommendations
@@ -218,8 +226,9 @@ export class CommentPublisher {
     if (criticalAndHigh.length > 0) {
       body += '### Top Issues\n\n';
       for (const issue of criticalAndHigh.slice(0, 5)) {
-        const emoji = issue.severity === 'critical' ? '🚨' : '⚠️';
-        body += `${emoji} **[${issue.file}:${issue.start_line}]** ${issue.title}\n`;
+        const severityColor = issue.severity === 'critical' ? 'red' : 'orange';
+        const severityBadge = this.generateShieldsIoBadge('severity', issue.severity, severityColor);
+        body += `${severityBadge} **[${issue.file}:${issue.start_line}]** ${issue.title}\n`;
       }
       body += '\n';
     }
@@ -250,5 +259,20 @@ export class CommentPublisher {
 
   private getIssueKey(issue: ReviewIssue): string {
     return `${issue.file}:${issue.start_line}:${issue.title}`;
+  }
+
+  /**
+   * Generate a Shields.io badge URL and markdown syntax
+   * @param label The badge label
+   * @param value The badge value
+   * @param color The badge color
+   * @returns Markdown syntax for embedded badge
+   */
+  private generateShieldsIoBadge(label: string, value: string, color: string): string {
+    const encodedLabel = encodeURIComponent(label);
+    const encodedValue = encodeURIComponent(value);
+    const url = `https://img.shields.io/badge/${encodedLabel}-${encodedValue}-${color}`;
+    const altText = `${label}: ${value}`;
+    return `![${altText}](${url})`;
   }
 }
